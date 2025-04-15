@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Health Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet" />
+  <style>
+    /* Animated gradient background */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      font-family: 'Orbitron', sans-serif;
+      color: #33ccff;
+      background: linear-gradient(45deg, #000, #002633, #000);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Boot animation */
+    #boot-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: bootFadeToWhite 3s ease-in forwards, bootFadeOut 1s ease-in-out 6s forwards;
+    }
+    .boot-logo {
+      font-size: 4em;
+      color: #33ccff;
+      opacity: 0;
+      animation: fadeInText 2s ease-in-out 1s forwards;
+      text-shadow: 0 0 15px #33ccff, 0 0 30px #33ccff;
+    }
+    .boot-subtitle {
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: #00aacc;
+      opacity: 0;
+      animation: fadeInText 2s ease-in-out 1.5s forwards;
+    }
+    @keyframes bootFadeToWhite {
+      0% { background-color: #000; opacity: 1; }
+      100% { background-color: #fff; opacity: 1; }
+    }
+    @keyframes bootFadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+    @keyframes fadeInText {
+      0% { opacity: 0; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Main content fade-in */
+    #main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      padding: 30px;
+      box-sizing: border-box;
+      opacity: 0;
+      animation: contentFadeIn 1s ease-in-out 7s forwards;
+    }
+    @keyframes contentFadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* Robot eyes */
+    .robot-eyes { display: flex; gap: 75px; justify-content: center; margin-bottom: 45px; width: 100%; max-width: 500px; }
+    .eye { width: 195px; height: 150px; position: relative; }
+    .eye svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 15px rgba(51,204,255,0.9)); backface-visibility: hidden; overflow: visible; /* Allow rotation transform */ }
+
+    /* Add transitions and transform-origin to the eye rects */
+    .eye-shape, .eye-reflection {
+       transform-origin: center center; /* Rotate around the center */
+       /* Slightly longer transition for smoother effect */
+       transition: transform 0.4s ease-out,
+                   width 0.4s ease-out,
+                   height 0.4s ease-out,
+                   x 0.4s ease-out,
+                   y 0.4s ease-out,
+                   rx 0.4s ease-out,
+                   ry 0.4s ease-out;
+    }
+    .eye .eye-shape { fill: #33ccff; stroke: #00aacc; stroke-width: 3; }
+    .eye .eye-reflection { pointer-events: none; }
+
+    /* Blinking animation (applied via JS) */
+    @keyframes blink {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.1); }
+    }
+
+    /* Get Help button */
+    #listen-button {
+      padding: 27px 52.5px;
+      font-size: 2.1em;
+      background: rgba(51, 204, 255, 0.7);
+      color: #000;
+      border: 3px solid rgba(51, 204, 255, 0.9);
+      border-radius: 22.5px;
+      cursor: pointer;
+      backdrop-filter: blur(7.5px);
+      box-shadow: 0 0 22.5px rgba(51, 204, 255, 0.5), inset 0 0 7.5px rgba(255, 255, 255, 0.3);
+      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out;
+      margin-bottom: 30px;
+    }
+    #listen-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 37.5px rgba(51, 204, 255, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.4);
+      background: rgba(51, 204, 255, 0.85);
+    }
+
+    /* Chat container */
+    #chat-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 90%;
+      max-width: 700px;
+      margin-top: 20px;
+      background-color: #eefaff;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(51, 204, 255, 0.2);
+    }
+    #chat-box {
+      width: 100%;
+      height: 300px;
+      overflow-y: auto;
+      border: 2px solid #33ccff;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: left;
+      background: white;
+      margin-bottom: 15px;
+      color: #333;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+    .message { margin: 10px 0; line-height: 1.4; }
+    .message strong { font-weight: bold; }
+    .message em { font-style: italic; }
+    .user { color: #000; font-weight: bold; }
+    .ai { color: #005073; }
+    .ai strong { color: #003f5c; }
+
+    textarea, input[type="file"], button {
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 10px;
+      border: 2px solid #33ccff;
+      resize: vertical;
+      min-height: 50px;
+    }
+    #submit-button {
+      padding: 10px 25px;
+      font-size: 1em;
+      background-color: #33ccff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-out;
+    }
+    #submit-button:hover { background-color: #00aacc; }
+
+    #processing, #typing-indicator {
+      display: none;
+      font-size: 1em;
+      color: #005073;
+      margin-top: 10px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div id="boot-animation">
+    <div class="boot-logo">Initializing...</div>
+  </div>
+
+  <div id="main-content">
+    <div class="robot-eyes">
+      <div class="eye eye-left">
+        <svg viewBox="0 0 195 150">
+          <defs>
+            <linearGradient id="glassGradientLeft" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:white; stop-opacity:0.5"/>
+              <stop offset="50%" style="stop-color:white; stop-opacity:0.05"/>
+              <stop offset="100%" style="stop-color:transparent; stop-opacity:0"/>
+            </linearGradient>
+          </defs>
+          <rect id="eye-left-shape" class="eye-shape" x="3.75" y="3.75" width="187.5" height="142.5" rx="30" ry="30"/>
+          <rect id="eye-left-reflection" class="eye-reflection" x="7.5" y="7.5" width="180" height="60" rx="27" ry="27" fill="url(#glassGradientLeft)" />
+        </svg>
+      </div>
+      <div class="eye eye-right">
+        <svg viewBox="0 0 195 150">
+          <defs>
+            <linearGradient id="glassGradientRight" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:white; stop-opacity:0.5"/>
+              <stop offset="50%" style="stop-color:white; stop-opacity:0.05"/>
+              <stop offset="100%" style="stop-color:transparent; stop-opacity:0"/>
+            </linearGradient>
+          </defs>
+          <rect id="eye-right-shape" class="eye-shape" x="3.75" y="3.75" width="187.5" height="142.5" rx="30" ry="30"/>
+          <rect id="eye-right-reflection" class="eye-reflection" x="7.5" y="7.5" width="180" height="60" rx="27" ry="27" fill="url(#glassGradientRight)" />
+        </svg>
+      </div>
+    </div>
+
+    <button id="listen-button">Get Help</button>
+
+    <div id="chat-container">
+      <div id="chat-box"></div>
+      <textarea id="user-input" placeholder="Type your message..."></textarea>
+      <input type="file" id="image-upload" accept="image/*" />
+      <button id="submit-button">Send</button>
+      <div id="typing-indicator">AI is thinking...</div>
+      <div id="processing">Processing...</div>
+    </div>
+  </div>
+
+  <audio id="type-sound" src="mixkit-data-input-on-typewriter-1378.wav" preload="auto"></audio>
+
+  <script>
+    // --- Global conversation history ---
+    let chatHistory = [];
+
+    // --- Helper function to safely play audio ---
+    function playSound(audioElement) {
+        if (audioElement && audioElement.readyState >= 2) { // Check if ready
+             audioElement.currentTime = 0; // Reset playback position
+             audioElement.play().catch(error => {
+                 // Autoplay was prevented, likely requires user interaction first
+                 // We try to load sounds on first click (see below)
+                 console.warn(`Audio play failed for ${audioElement.id}:`, error);
+             });
+        } else if (audioElement) {
+            console.warn(`Audio element ${audioElement.id} not ready.`);
+            // Optionally try loading it again
+            audioElement.load();
+        }
+    }
+
+
+    window.addEventListener('load', () => {
+      const bootAnimation = document.getElementById('boot-animation');
+      const bootSubtitle = document.getElementById('boot-subtitle');
+      const bootSound = document.getElementById('boot-sound'); // Get boot sound element
+
+      // --- Play Boot Sound ---
+      // Attempt to play boot sound early, might require user interaction
+      playSound(bootSound);
+      let bootMessageIndex = 0;
+      const bootInterval = setInterval(() => {
+        bootSubtitle.textContent = bootMessages[bootMessageIndex];
+        bootMessageIndex = (bootMessageIndex + 1) % bootMessages.length;
+      }, 2500);
+
+      // Hide boot animation after it completes
+      setTimeout(() => {
+        if (bootAnimation) { bootAnimation.style.display = 'none'; }
+        clearInterval(bootInterval);
+        setTimeout(scheduleNextBlink, 500);
+      }, 7000);
+
+      // Elements
+      const listenButton = document.getElementById('listen-button');
+      const chatContainer = document.getElementById('chat-container');
+      const chatBox = document.getElementById('chat-box');
+      const userInput = document.getElementById('user-input');
+      const imageUpload = document.getElementById('image-upload');
+      const submitButton = document.getElementById('submit-button');
+      const typingIndicator = document.getElementById('typing-indicator');
+      const processingDiv = document.getElementById('processing');
+      // --- Audio Elements ---
+      const typeSound = document.getElementById('type-sound');
+      const clickSound = document.getElementById('click-sound');
+      const sendSound = document.getElementById('send-sound');
+      const allSounds = [typeSound, bootSound, clickSound, sendSound]; // Array for easier handling
+
+
+      // --- Eye Tracking Elements and Constants ---
+      const leftEyeShape = document.getElementById('eye-left-shape');
+      const rightEyeShape = document.getElementById('eye-right-shape');
+      const leftEyeReflection = document.getElementById('eye-left-reflection');
+      const rightEyeReflection = document.getElementById('eye-right-reflection');
+
+      // Store original dimensions
+      const ORIGINAL_WIDTH = 187.5;
+      const ORIGINAL_HEIGHT = 142.5;
+      const ORIGINAL_X = 3.75;
+      const ORIGINAL_Y = 3.75;
+      const ORIGINAL_RX = 30;
+      const ORIGINAL_RY = 30;
+      const ORIGINAL_REFLECTION_HEIGHT = 60; // Store original reflection height
+      
+      // --- Blinking Logic---
+      let blinkTimeout;
+      function triggerBlink(eyeSvgContainer) {
+          if (!eyeSvgContainer) return;
+          const eyeShape = eyeSvgContainer.querySelector('.eye-shape');
+          const eyeReflection = eyeSvgContainer.querySelector('.eye-reflection');
+          if (eyeShape && !eyeShape.classList.contains('blinking')) {
+              eyeShape.classList.add('blinking');
+              const originalTransform = eyeShape.getAttribute('transform') || '';
+              eyeShape.style.transition = 'transform 0.08s ease-in-out';
+              eyeShape.style.transformOrigin = 'center center';
+              eyeShape.style.transform = `${originalTransform} scaleY(0.1)`;
+              if(eyeReflection) eyeReflection.style.opacity = '0';
+
+              setTimeout(() => {
+                  eyeShape.style.transform = `${originalTransform} scaleY(1)`;
+                  if(eyeReflection) eyeReflection.style.opacity = '1';
+                  setTimeout(() => {
+                      eyeShape.classList.remove('blinking');
+                      eyeShape.style.transition = '';
+                      eyeShape.style.transformOrigin = '';
+                      eyeShape.style.transform = '';
+                       if(eyeReflection) eyeReflection.style.opacity = '';
+                  }, 100);
+              }, 80);
+          }
+      }
+
+      function scheduleNextBlink() {
+          clearTimeout(blinkTimeout);
+          const leftEyeContainer = document.querySelector('.eye-left');
+          const rightEyeContainer = document.querySelector('.eye-right');
+          if (!leftEyeContainer || !rightEyeContainer) return;
+          const delay = Math.random() * (6000 - 2000) + 2000;
+          blinkTimeout = setTimeout(() => {
+              const r = Math.random();
+              if (r < 0.6) {
+                  triggerBlink(leftEyeContainer);
+                  setTimeout(() => triggerBlink(rightEyeContainer), 50 + Math.random() * 100);
+              } else if (r < 0.8) {
+                  triggerBlink(leftEyeContainer);
+              } else {
+                  triggerBlink(rightEyeContainer);
+              }
+              scheduleNextBlink();
+          }, delay);
+      }
+
+
+      // --- Button and Chat Logic (Keep as is) ---
+      if (listenButton && chatContainer) {
+        listenButton.addEventListener('click', () => {
+          listenButton.style.display = 'none';
+          chatContainer.style.display = 'flex';
+          typeMessage("Hello! How can I help you today?");
+          chatHistory.push({ role: 'model', parts: [{ text: "Hello! How can I help you today?" }] });
+        });
+      }
+
+      if (submitButton && userInput && imageUpload && chatBox && processingDiv && typingIndicator) {
+        submitButton.addEventListener('click', handleSubmit);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+            }
+        });
+      } else {
+        console.error("One or more required chat elements not found.");
+      }
+
+      async function handleSubmit() {
+          const text = userInput.value.trim();
+          const image = imageUpload.files[0];
+          if (!text && !image) {
+              console.log("Input needed");
+              return;
+          }
+
+          triggerBlink(document.querySelector('.eye-left'));
+          triggerBlink(document.querySelector('.eye-right'));
+
+          let userMsgForDisplay = "";
+          let userPartsForHistory = [];
+          if (text) {
+            userMsgForDisplay += text;
+            userPartsForHistory.push({ text: text });
+          }
+          if (image) {
+            userMsgForDisplay += (text ? " " : "") + `[Image: ${image.name}]`;
+            if (!text) {
+              userPartsForHistory.push({ text: `[Image Uploaded: ${image.name}]`});
+            }
+          }
+          appendMessage("user", userMsgForDisplay);
+          if (userPartsForHistory.length > 0) {
+            chatHistory.push({ role: 'user', parts: userPartsForHistory });
+          }
+
+          userInput.value = "";
+          imageUpload.value = "";
+
+          const formData = new FormData();
+          formData.append('prompt', text ? text : '');
+          if (image) formData.append('image', image);
+          formData.append('history', JSON.stringify(chatHistory));
+
+          if (typingIndicator) typingIndicator.style.display = 'block';
+
+          try {
+            const response = await fetch('/process', { method: 'POST', body: formData });
+            if (typingIndicator) typingIndicator.style.display = 'none';
+            if (!response.ok) {
+              let errorMsg = `HTTP error! status: ${response.status}`;
+              try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+              } catch (e) { console.error("Could not parse error response:", e); }
+              throw new Error(errorMsg);
+            }
+            const data = await response.json();
+            const aiResponseText = data.response_text || "Sorry, I couldn't process that.";
+            chatHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+            await typeMessage(aiResponseText);
+          } catch (err) {
+            console.error("Fetch error:", err);
+            if (typingIndicator) typingIndicator.style.display = 'none';
+            await typeMessage(`Error: ${err.message}`); // Display error in chat
+          }
+      }
+
+      function appendMessage(sender, text) {
+        if (!chatBox) return;
+        const div = document.createElement('div');
+        div.className = `message ${sender}`;
+        div.textContent = `${sender === 'user' ? 'You' : 'AI'}: ${text}`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      function convertMarkdownToHTML(text) {
+        let escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        escapedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        escapedText = escapedText.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+        escapedText = escapedText.replace(/\n/g, '<br>');
+        return escapedText;
+      }
+
+      async function typeMessage(rawText) {
+        if (!chatBox || !typeSound) return;
+        const div = document.createElement('div');
+        div.className = 'message ai';
+        const labelSpan = document.createElement('span');
+        labelSpan.style.fontWeight = 'bold';
+        labelSpan.textContent = 'AI: ';
+        div.appendChild(labelSpan);
+        const contentSpan = document.createElement('span');
+        div.appendChild(contentSpan);
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const fullHtmlContent = convertMarkdownToHTML(rawText);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = fullHtmlContent;
+        const nodes = Array.from(tempDiv.childNodes);
+
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node.cloneNode(false);
+                contentSpan.appendChild(element);
+                await typeNodeContent(element, node.textContent || '');
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                await typeNodeContent(contentSpan, node.textContent || '');
+            }
+             chatBox.scrollTop = chatBox.scrollHeight;
+        }
+         chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      async function typeNodeContent(targetElement, text) {
+           for (let j = 0; j < text.length; j++) {
+              targetElement.textContent += text[j];
+              if (typeSound.readyState >= 2 && text[j] !== ' ' && text[j] !== '\n') {
+                  typeSound.currentTime = 0;
+                  typeSound.play().catch(e => console.warn("Audio play failed:", e));
+              }
+              await new Promise(resolve => setTimeout(resolve, 20));
+           }
+      }
+
+      if (typeSound) {
+        typeSound.onerror = (e) => { console.error("Error loading audio file:", e); };
+        document.body.addEventListener('click', () => typeSound.load(), { once: true });
+      }
+
+    }); // End window.onload
+  </script>
+</body>
+</html>
